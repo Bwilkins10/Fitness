@@ -132,6 +132,7 @@
       <button class="btn green sm" onclick="logWater(8)">+ Cup (8oz)</button>
       <button class="btn green sm" onclick="logWater(16)">+ Bottle (16oz)</button>
       <button class="btn green sm" onclick="logWater(24)">+ Big (24oz)</button>
+      <button class="btn green sm" onclick="logWater(17)">+ Propel 🍉 (17oz)</button>
       <button class="btn ghost sm" onclick="logWater(-8)">− Undo</button>
     </div>
   </div>
@@ -160,6 +161,13 @@
       </div>
       <div style="display:flex;align-items:flex-end">
         <button class="btn green" style="width:100%" onclick="quickFood()">Add meal</button>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label>Favorites — one tap</label>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost sm" onclick="logFav('Nature Valley Peanut bars',190,4)">🥜 Nature Valley Peanut bars</button>
+        <button class="btn ghost sm" onclick="logFav('Whey shake (milk, PB, banana)',550,50)">🥤 Whey shake</button>
       </div>
     </div>
     <div class="row" style="margin-top:12px">
@@ -222,18 +230,20 @@
   </div>
 
   <div class="card">
-    <h2>📋 Fallback meal plan</h2>
-    <p class="small muted" style="margin-top:-4px">Three no-think days that each land near <b style="color:var(--text)">~2,900 kcal / 180g protein</b> on a budget (roughly $6–8/day). Rotate them, or mix and match. Tap a meal's "log it" to drop it straight into today's food log.</p>
+    <h2>📋 Your meal plan</h2>
+    <p class="small muted" style="margin-top:-4px">Built around your foods — chicken, turkey, eggs & dairy, fish, with rice and pasta/bread. Three batch-prep days that each land near <b style="color:var(--text)">~2,900 kcal / ~190g protein</b> on a budget (roughly $6–8/day). Rotate them or mix and match. Tap a meal's "log it" to drop it into today's food log.</p>
 
     <div class="day-tabs" id="mealDayTabs"></div>
     <div id="mealDayContent"></div>
 
-    <details style="margin-top:14px">
+    <div class="hint" style="margin-top:12px"><b>Sunday batch prep (≈1 hr):</b> cook a big pot of rice, bake a tray of chicken (6–8 portions) and one of salmon/tilapia, boil a batch of pasta, and hard-boil some eggs. Then the week is just assembly.</div>
+
+    <details style="margin-top:12px">
       <summary>🛒 One-week grocery list (~$55–70)</summary>
-      <p class="small"><b>Protein:</b> 2 dozen eggs · 3 lb chicken thighs/breast · 2 lb ground beef (85/15) · 4 cans tuna · 1 gal milk · large Greek yogurt · large cottage cheese · jar peanut butter<br>
-      <b>Carbs:</b> big bag rice · oats · 5 lb potatoes · loaf bread · pasta · bananas · apples<br>
-      <b>Veg/fats:</b> frozen mixed veg (2 bags) · bag of onions · olive oil · block of cheese<br>
-      <b>Optional:</b> tub of whey protein (cheapest per-gram protein there is), creatine monohydrate.</p>
+      <p class="small"><b>Protein:</b> 3 dozen eggs · 4 lb chicken breast · 1 lb ground turkey + turkey sausage · deli turkey · 2 bags frozen shrimp · 1 gal milk · 2 large Greek yogurt · cheese slices/string cheese<br>
+      <b>Carbs/snacks:</b> big bag rice · pasta · loaf of bread · bagels · tortillas · 1 can black beans · bananas · apples · berries · box of Nature Valley Peanut bars<br>
+      <b>Veg/fats:</b> frozen mixed veg (2 bags) · onion · olive oil · light mayo · jar peanut butter · marinara sauce · salsa<br>
+      <b>Worth adding:</b> tub of whey protein (cheapest protein-per-gram there is) and creatine monohydrate.</p>
     </details>
     <div class="hint"><b>Muscle-building rule of thumb:</b> ~1g protein per pound of bodyweight, hit your calorie target most days, and expect ~0.25–0.5 lb gain per week. Faster than that is mostly fat. Missed a meal on a busy lawn day? A shake of milk + 2 scoops whey + peanut butter + banana is ~600 kcal / 45g protein in 60 seconds.</div>
   </div>
@@ -488,6 +498,8 @@ function quickFood(){
   renderFoodList();renderFoodTotals();
 }
 function delFood(i){todayFood().splice(i,1);save();renderFoodList();renderFoodTotals();}
+function logFav(n,c,p){todayFood().push({n,c,p});save();renderFoodList();renderFoodTotals();
+  const s=document.getElementById('saveState');if(s)s.textContent='added ✓';}
 function renderFoodList(){
   const ul=document.getElementById('foodList');const f=todayFood();ul.innerHTML='';
   if(!f.length){ul.innerHTML='<li class="muted small">No food logged yet today.</li>';}
@@ -544,28 +556,28 @@ function renderSupps(){
 /* ---------- fallback meal plan ---------- */
 const MEALPLAN={
   'Day A':[
-    {n:'4 eggs + 2 toast + banana',c:560,p:32},
-    {n:'Greek yogurt + granola + berries',c:380,p:24},
-    {n:'Chicken breast, rice & mixed veg',c:650,p:50},
-    {n:'PB sandwich + glass of milk',c:520,p:26},
-    {n:'Lean beef, potatoes & salad',c:700,p:45},
-    {n:'Cottage cheese before bed',c:180,p:20},
+    {n:'Scrambled eggs (3) + 2 toast + banana',c:530,p:25},
+    {n:'Greek yogurt + granola + honey',c:300,p:20},
+    {n:'Chicken & rice bowl (6oz chicken, 1.5c rice, veg)',c:680,p:55},
+    {n:'Turkey & cheese sandwich',c:380,p:28},
+    {n:'Garlic shrimp pasta + veg',c:720,p:48},
+    {n:'Greek yogurt + honey (before bed)',c:230,p:22},
   ],
   'Day B':[
-    {n:'Oats + whey scoop + peanut butter',c:600,p:40},
-    {n:'2 cans tuna + crackers + apple',c:420,p:44},
-    {n:'Ground beef pasta + cheese',c:750,p:45},
-    {n:'Milk + banana + handful nuts',c:430,p:16},
-    {n:'Chicken thighs, rice & veg',c:620,p:42},
-    {n:'Greek yogurt before bed',c:150,p:18},
+    {n:'Egg & cheese bagel + Greek yogurt',c:560,p:32},
+    {n:'Whey shake (milk, PB, banana)',c:550,p:50},
+    {n:'Chicken pasta salad (chicken, pasta, veg, light mayo)',c:650,p:46},
+    {n:'Nature Valley Peanut bars + string cheese',c:270,p:11},
+    {n:'Ground turkey pasta + cheese',c:680,p:46},
+    {n:'Greek yogurt before bed',c:180,p:20},
   ],
   'Day C':[
-    {n:'Breakfast burrito (3 eggs, beef, cheese, tortilla)',c:640,p:38},
-    {n:'Protein shake + oats',c:480,p:40},
-    {n:'Turkey/chicken sandwich x2 + milk',c:680,p:48},
-    {n:'Apple + peanut butter',c:300,p:8},
-    {n:'Beef & bean chili + rice',c:640,p:42},
-    {n:'Cottage cheese + pineapple',c:200,p:22},
+    {n:'Eggs (3) + turkey sausage + toast',c:560,p:34},
+    {n:'Greek yogurt + berries',c:250,p:18},
+    {n:'Chicken burrito bowl (chicken, rice, beans, cheese)',c:720,p:50},
+    {n:'Turkey & cheese roll-ups + apple',c:330,p:26},
+    {n:'Shrimp fried rice (shrimp, rice, egg, veg)',c:720,p:42},
+    {n:'PB toast + glass of milk',c:320,p:16},
   ],
 };
 const MEALDAYS=Object.keys(MEALPLAN);
