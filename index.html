@@ -121,8 +121,30 @@
   </div>
 
   <div class="card">
+    <h2>💧 Water</h2>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div><span class="n" id="waterOz" style="font-size:26px;font-weight:800">0</span> <span class="muted">/ <span id="waterTgt">110</span> oz</span>
+        <div class="small muted" id="waterCups">0 cups</div></div>
+      <div style="text-align:right"><div class="pill g" id="waterPct">0%</div></div>
+    </div>
+    <div class="bar" style="margin-top:8px"><span id="waterBar" style="width:0%"></span></div>
+    <div class="row" style="margin-top:12px;gap:8px">
+      <button class="btn green sm" onclick="logWater(8)">+ Cup (8oz)</button>
+      <button class="btn green sm" onclick="logWater(16)">+ Bottle (16oz)</button>
+      <button class="btn green sm" onclick="logWater(24)">+ Big (24oz)</button>
+      <button class="btn ghost sm" onclick="logWater(-8)">− Undo</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>🏋️ Today's workout</h2>
     <div id="todayWorkout"></div>
+  </div>
+
+  <div class="card">
+    <h2>💊 Daily supplements</h2>
+    <div id="suppList"></div>
+    <p class="small muted" style="margin-top:8px">Tap to check off. Creatine is the one supplement genuinely worth it for muscle — 5g a day, any time.</p>
   </div>
 
   <div class="card">
@@ -200,21 +222,20 @@
   </div>
 
   <div class="card">
-    <h3>Sample day (~2,900 kcal / 180g protein)</h3>
-    <table>
-      <tr><th>Meal</th><th class="num">kcal</th><th class="num">protein</th></tr>
-      <tr><td>4 eggs + 2 toast + banana</td><td class="num">560</td><td class="num">32</td></tr>
-      <tr><td>Greek yogurt + granola + berries</td><td class="num">380</td><td class="num">24</td></tr>
-      <tr><td>Chicken breast, rice & veg</td><td class="num">650</td><td class="num">50</td></tr>
-      <tr><td>Peanut butter sandwich + milk</td><td class="num">520</td><td class="num">26</td></tr>
-      <tr><td>Lean beef, potatoes & salad</td><td class="num">700</td><td class="num">45</td></tr>
-      <tr><td>Cottage cheese before bed</td><td class="num">180</td><td class="num">20</td></tr>
-    </table>
-    <details style="margin-top:12px">
-      <summary>Budget grocery staples</summary>
-      <p class="small">Eggs, whole chicken / thighs, ground beef, canned tuna, milk, Greek yogurt, cottage cheese, peanut butter, oats, rice, potatoes, pasta, frozen veg, bananas, apples, olive oil. Protein-per-dollar winners: eggs, milk, chicken thighs, canned tuna, dry beans.</p>
+    <h2>📋 Fallback meal plan</h2>
+    <p class="small muted" style="margin-top:-4px">Three no-think days that each land near <b style="color:var(--text)">~2,900 kcal / 180g protein</b> on a budget (roughly $6–8/day). Rotate them, or mix and match. Tap a meal's "log it" to drop it straight into today's food log.</p>
+
+    <div class="day-tabs" id="mealDayTabs"></div>
+    <div id="mealDayContent"></div>
+
+    <details style="margin-top:14px">
+      <summary>🛒 One-week grocery list (~$55–70)</summary>
+      <p class="small"><b>Protein:</b> 2 dozen eggs · 3 lb chicken thighs/breast · 2 lb ground beef (85/15) · 4 cans tuna · 1 gal milk · large Greek yogurt · large cottage cheese · jar peanut butter<br>
+      <b>Carbs:</b> big bag rice · oats · 5 lb potatoes · loaf bread · pasta · bananas · apples<br>
+      <b>Veg/fats:</b> frozen mixed veg (2 bags) · bag of onions · olive oil · block of cheese<br>
+      <b>Optional:</b> tub of whey protein (cheapest per-gram protein there is), creatine monohydrate.</p>
     </details>
-    <div class="hint"><b>Muscle-building rule of thumb:</b> aim for ~1g of protein per pound of bodyweight, hit your calorie target most days, and expect ~0.25–0.5 lb of weight gain per week. Faster than that is mostly fat.</div>
+    <div class="hint"><b>Muscle-building rule of thumb:</b> ~1g protein per pound of bodyweight, hit your calorie target most days, and expect ~0.25–0.5 lb gain per week. Faster than that is mostly fat. Missed a meal on a busy lawn day? A shake of milk + 2 scoops whey + peanut butter + banana is ~600 kcal / 45g protein in 60 seconds.</div>
   </div>
 </section>
 
@@ -231,6 +252,7 @@
       <div class="stat"><div class="n" id="pWorkouts">0</div><div class="l">workouts done</div></div>
       <div class="stat"><div class="n" id="pDaysLogged">0</div><div class="l">days food-logged</div></div>
       <div class="stat"><div class="n" id="pAvgPro">0</div><div class="l">avg protein</div></div>
+      <div class="stat"><div class="n" id="pAvgWater">0</div><div class="l">avg water oz</div></div>
     </div>
   </div>
   <div class="card">
@@ -267,7 +289,12 @@
           <option value="-400">Lean out (−400 kcal)</option>
         </select>
       </div>
+      <div style="grid-column:1/-1">
+        <label>Daily water target (oz)</label>
+        <input type="number" id="sWater" placeholder="e.g. 110">
+      </div>
     </div>
+    <p class="small muted" style="margin-top:8px">A good target is about your bodyweight in pounds ÷ 2, in ounces — more on training or hot lawn-work days. 110 oz ≈ 14 cups.</p>
     <div style="margin-top:14px"><button class="btn" onclick="saveSetup()">Calculate & save targets</button></div>
   </div>
   <div class="card">
@@ -303,8 +330,15 @@
 const KEY='wilkinsFit_v1';
 let DB=load();
 function load(){
-  try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}
-  return {setup:{act:1.55,goal:300,sex:'m'},targets:null,food:{},bw:[],workouts:{},lifts:{}};
+  let db=null;
+  try{const r=localStorage.getItem(KEY);if(r)db=JSON.parse(r);}catch(e){}
+  if(!db)db={setup:{act:1.55,goal:300,sex:'m',waterTarget:110},targets:null,food:{},bw:[],workouts:{},lifts:{}};
+  // backward-compatible defaults for new features
+  db.water=db.water||{};
+  db.supps=db.supps||{};
+  if(!db.setup)db.setup={};
+  if(!db.setup.waterTarget)db.setup.waterTarget=110;
+  return db;
 }
 function save(){
   DB._updated=Date.now();
@@ -420,6 +454,8 @@ function renderToday(){
   }
   renderFoodTotals();
   renderStreak();
+  renderWater();
+  renderSupps();
 }
 function toggleWorkout(tk){DB.workouts[tk]=!DB.workouts[tk];if(!DB.workouts[tk])delete DB.workouts[tk];save();renderToday();renderWeek();}
 
@@ -478,6 +514,84 @@ function renderFoodTotals(){
   }
 }
 
+/* ---------- water ---------- */
+function logWater(oz){
+  const k=todayKey();DB.water[k]=Math.max(0,(DB.water[k]||0)+oz);save();renderWater();
+}
+function renderWater(){
+  const k=todayKey();const oz=DB.water[k]||0;const tgt=(DB.setup&&DB.setup.waterTarget)||110;
+  const pct=Math.min(100,Math.round(oz/tgt*100));
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('waterOz',oz);set('waterTgt',tgt);set('waterCups',(oz/8).toFixed(1)+' cups');set('waterPct',pct+'%');
+  const bar=document.getElementById('waterBar');if(bar)bar.style.width=pct+'%';
+  const pill=document.getElementById('waterPct');if(pill)pill.className='pill '+(pct>=100?'g':'o');
+}
+
+/* ---------- supplements ---------- */
+const SUPPS=['Creatine 5g','Protein shake','Multivitamin','Fish oil / omega-3'];
+function todaySupps(){const k=todayKey();if(!DB.supps[k])DB.supps[k]={};return DB.supps[k];}
+function toggleSupp(name){const s=todaySupps();s[name]=!s[name];if(!s[name])delete s[name];save();renderSupps();}
+function renderSupps(){
+  const box=document.getElementById('suppList');if(!box)return;const s=todaySupps();box.innerHTML='';
+  SUPPS.forEach(name=>{
+    const on=!!s[name];const d=document.createElement('div');
+    d.className='logline';d.style.margin='0 0 6px';
+    d.innerHTML=`<button class="btn ${on?'green':'ghost'} sm" style="min-width:150px;text-align:left" onclick="toggleSupp('${name}')">${on?'✓ ':'○ '}${name}</button>`;
+    box.appendChild(d);
+  });
+}
+
+/* ---------- fallback meal plan ---------- */
+const MEALPLAN={
+  'Day A':[
+    {n:'4 eggs + 2 toast + banana',c:560,p:32},
+    {n:'Greek yogurt + granola + berries',c:380,p:24},
+    {n:'Chicken breast, rice & mixed veg',c:650,p:50},
+    {n:'PB sandwich + glass of milk',c:520,p:26},
+    {n:'Lean beef, potatoes & salad',c:700,p:45},
+    {n:'Cottage cheese before bed',c:180,p:20},
+  ],
+  'Day B':[
+    {n:'Oats + whey scoop + peanut butter',c:600,p:40},
+    {n:'2 cans tuna + crackers + apple',c:420,p:44},
+    {n:'Ground beef pasta + cheese',c:750,p:45},
+    {n:'Milk + banana + handful nuts',c:430,p:16},
+    {n:'Chicken thighs, rice & veg',c:620,p:42},
+    {n:'Greek yogurt before bed',c:150,p:18},
+  ],
+  'Day C':[
+    {n:'Breakfast burrito (3 eggs, beef, cheese, tortilla)',c:640,p:38},
+    {n:'Protein shake + oats',c:480,p:40},
+    {n:'Turkey/chicken sandwich x2 + milk',c:680,p:48},
+    {n:'Apple + peanut butter',c:300,p:8},
+    {n:'Beef & bean chili + rice',c:640,p:42},
+    {n:'Cottage cheese + pineapple',c:200,p:22},
+  ],
+};
+const MEALDAYS=Object.keys(MEALPLAN);
+let activeMealDay=MEALDAYS[0];
+function renderMealTabs(){
+  const t=document.getElementById('mealDayTabs');if(!t)return;t.innerHTML='';
+  MEALDAYS.forEach(d=>{const b=document.createElement('button');b.textContent=d;
+    if(d===activeMealDay)b.classList.add('active');
+    b.onclick=()=>{activeMealDay=d;renderMealTabs();renderMealDay();};t.appendChild(b);});
+}
+function renderMealDay(){
+  const c=document.getElementById('mealDayContent');if(!c)return;
+  const meals=MEALPLAN[activeMealDay];
+  let tc=meals.reduce((a,x)=>a+x.c,0),tp=meals.reduce((a,x)=>a+x.p,0);
+  let html='<table><tr><th>Meal</th><th class="num">kcal</th><th class="num">protein</th><th></th></tr>';
+  meals.forEach((m,i)=>{html+=`<tr><td>${m.n}</td><td class="num">${m.c}</td><td class="num">${m.p}g</td>
+    <td class="num"><button class="btn green sm" onclick="logMeal('${activeMealDay}',${i})">log it</button></td></tr>`;});
+  html+=`<tr style="font-weight:700"><td>Total</td><td class="num">${tc}</td><td class="num">${tp}g</td><td></td></tr></table>`;
+  c.innerHTML=html;
+}
+function logMeal(day,i){
+  const m=MEALPLAN[day][i];todayFood().push({n:m.n,c:m.c,p:m.p});save();
+  renderFoodList();renderFoodTotals();
+  document.querySelector('nav button[data-v="today"]').click();
+}
+
 /* ---------- bodyweight ---------- */
 function logBw(){
   const v=+document.getElementById('qBw').value;if(!v)return;
@@ -513,15 +627,17 @@ function drawChart(){
 /* ---------- progress week ---------- */
 function renderWeek(){
   const now=new Date();const start=new Date(now);start.setDate(now.getDate()-now.getDay());
-  let w=0,days=0,proSum=0;
+  let w=0,days=0,proSum=0,waterSum=0,waterDays=0;
   for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);
     const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     if(DB.workouts[k])w++;
     if(DB.food[k]&&DB.food[k].length){days++;proSum+=DB.food[k].reduce((a,x)=>a+x.p,0);}
+    if(DB.water[k]){waterSum+=DB.water[k];waterDays++;}
   }
   document.getElementById('pWorkouts').textContent=w;
   document.getElementById('pDaysLogged').textContent=days;
   document.getElementById('pAvgPro').textContent=days?Math.round(proSum/days):0;
+  const aw=document.getElementById('pAvgWater');if(aw)aw.textContent=waterDays?Math.round(waterSum/waterDays):0;
 }
 function renderLiftHistory(){
   const box=document.getElementById('liftHistory');const keys=Object.keys(DB.lifts);
@@ -535,8 +651,9 @@ function renderLiftHistory(){
 function saveSetup(){
   const age=+document.getElementById('sAge').value,ht=+document.getElementById('sHt').value,
     wt=+document.getElementById('sWt').value,sex=document.getElementById('sSex').value,
-    act=+document.getElementById('sAct').value,goal=+document.getElementById('sGoal').value;
-  DB.setup={age,ht,wt,sex,act,goal};
+    act=+document.getElementById('sAct').value,goal=+document.getElementById('sGoal').value,
+    waterTarget=+document.getElementById('sWater').value||110;
+  DB.setup={age,ht,wt,sex,act,goal,waterTarget};
   if(age&&ht&&wt){
     const kg=wt/2.205,cm=ht*2.54;
     let bmr=10*kg+6.25*cm-5*age+(sex==='m'?5:-161);
@@ -547,7 +664,7 @@ function saveSetup(){
     const carb=Math.round((cal-(pro*4+fat*9))/4);
     DB.targets={cal,pro,fat,carb,tdee};
   }
-  save();renderTargets();renderFoodTotals();
+  save();renderTargets();renderFoodTotals();renderWater();
   document.querySelector('nav button[data-v="diet"]').click();
 }
 function renderTargets(){
@@ -559,6 +676,7 @@ function renderTargets(){
     if(s.sex)document.getElementById('sSex').value=s.sex;
     if(s.act)document.getElementById('sAct').value=s.act;
     if(s.goal!==undefined)document.getElementById('sGoal').value=s.goal;
+    if(s.waterTarget&&document.getElementById('sWater'))document.getElementById('sWater').value=s.waterTarget;
   }
   if(t){
     document.getElementById('dCal').textContent=t.cal;
@@ -658,6 +776,7 @@ async function pushNow(manual){
 function initAll(pull){
   renderDayTabs();renderDay();renderToday();renderFoodList();renderFoodTotals();
   renderTargets();renderWeek();renderLiftHistory();drawChart();fillSync();
+  renderWater();renderSupps();renderMealTabs();renderMealDay();
   if(pull!==false&&SYNC.token)pullNow(false);
 }
 initAll();
