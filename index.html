@@ -544,7 +544,7 @@ function renderWater(){
 }
 
 /* ---------- supplements ---------- */
-const SUPPS=['Creatine 5g','Protein shake','Multivitamin','Fish oil / omega-3'];
+const SUPPS=['Creatine 5g','Whey shake','Multivitamin'];
 function todaySupps(){const k=todayKey();if(!DB.supps[k])DB.supps[k]={};return DB.supps[k];}
 function toggleSupp(name){const s=todaySupps();s[name]=!s[name];if(!s[name])delete s[name];save();renderSupps();}
 function renderSupps(){
