@@ -340,16 +340,23 @@
 /* ---------- storage ---------- */
 const KEY='wilkinsFit_v1';
 let DB=load();
+function ensureDefaults(db){
+  if(!db||typeof db!=='object')db={};
+  if(!db.setup)db.setup={act:1.55,goal:300,sex:'m'};
+  if(!db.setup.waterTarget)db.setup.waterTarget=110;
+  if(!('targets' in db))db.targets=null;
+  if(!db.food)db.food={};
+  if(!Array.isArray(db.bw))db.bw=[];
+  if(!db.workouts)db.workouts={};
+  if(!db.lifts)db.lifts={};
+  if(!db.water)db.water={};
+  if(!db.supps)db.supps={};
+  return db;
+}
 function load(){
   let db=null;
   try{const r=localStorage.getItem(KEY);if(r)db=JSON.parse(r);}catch(e){}
-  if(!db)db={setup:{act:1.55,goal:300,sex:'m',waterTarget:110},targets:null,food:{},bw:[],workouts:{},lifts:{}};
-  // backward-compatible defaults for new features
-  db.water=db.water||{};
-  db.supps=db.supps||{};
-  if(!db.setup)db.setup={};
-  if(!db.setup.waterTarget)db.setup.waterTarget=110;
-  return db;
+  return ensureDefaults(db);
 }
 function save(){
   DB._updated=Date.now();
@@ -482,7 +489,7 @@ function renderStreak(){
 }
 
 /* ---------- food ---------- */
-function todayFood(){const k=todayKey();if(!DB.food[k])DB.food[k]=[];return DB.food[k];}
+function todayFood(){if(!DB.food)DB.food={};const k=todayKey();if(!DB.food[k])DB.food[k]=[];return DB.food[k];}
 function addFood(){
   const n=document.getElementById('fName').value.trim()||'Food';
   const c=+document.getElementById('fCal').value||0;
@@ -532,10 +539,11 @@ function renderFoodTotals(){
 
 /* ---------- water ---------- */
 function logWater(oz){
+  if(!DB.water)DB.water={};
   const k=todayKey();DB.water[k]=Math.max(0,(DB.water[k]||0)+oz);save();renderWater();
 }
 function renderWater(){
-  const k=todayKey();const oz=DB.water[k]||0;const tgt=(DB.setup&&DB.setup.waterTarget)||110;
+  const k=todayKey();const oz=(DB.water&&DB.water[k])||0;const tgt=(DB.setup&&DB.setup.waterTarget)||110;
   const pct=Math.min(100,Math.round(oz/tgt*100));
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   set('waterOz',oz);set('waterTgt',tgt);set('waterCups',(oz/8).toFixed(1)+' cups');set('waterPct',pct+'%');
@@ -545,7 +553,7 @@ function renderWater(){
 
 /* ---------- supplements ---------- */
 const SUPPS=['Creatine 5g','Whey shake','Multivitamin'];
-function todaySupps(){const k=todayKey();if(!DB.supps[k])DB.supps[k]={};return DB.supps[k];}
+function todaySupps(){if(!DB.supps)DB.supps={};const k=todayKey();if(!DB.supps[k])DB.supps[k]={};return DB.supps[k];}
 function toggleSupp(name){const s=todaySupps();s[name]=!s[name];if(!s[name])delete s[name];save();renderSupps();}
 function renderSupps(){
   const box=document.getElementById('suppList');if(!box)return;const s=todaySupps();box.innerHTML='';
@@ -713,7 +721,7 @@ function exportData(){
 }
 function importData(e){
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{DB=JSON.parse(r.result);save();initAll();alert('Backup restored.');}catch(err){alert('Could not read that file.');}};
+  r.onload=()=>{try{DB=ensureDefaults(JSON.parse(r.result));save();initAll();alert('Backup restored.');}catch(err){alert('Could not read that file.');}};
   r.readAsText(f);
 }
 
@@ -766,7 +774,7 @@ async function pullNow(alsoPushIfNewerLocal){
   try{
     const remote=await ghFetch();
     if(remote&&(remote._updated||0)>=(DB._updated||0)){
-      DB=remote;localStorage.setItem(KEY,JSON.stringify(DB));initAll(false);
+      DB=ensureDefaults(remote);localStorage.setItem(KEY,JSON.stringify(DB));initAll(false);
       syncMsg('Pulled latest from cloud ✓');
     }else if(alsoPushIfNewerLocal){
       await ghSave(DB);syncMsg('Your device had newer data — pushed to cloud ✓');
