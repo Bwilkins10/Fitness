@@ -182,6 +182,12 @@
       </div>
     </div>
   </div>
+
+  <div class="card">
+    <h2>🕘 Recent foods</h2>
+    <p class="small muted" style="margin-top:-4px">Tap to log again. Sorted by what you use most.</p>
+    <div id="recentFoods"></div>
+  </div>
 </section>
 
 <!-- ================= WORKOUTS ================= -->
@@ -362,6 +368,7 @@ function ensureDefaults(db){
   if(!db.lifts)db.lifts={};
   if(!db.water)db.water={};
   if(!db.supps)db.supps={};
+  if(!Array.isArray(db.recents))db.recents=[];
   return db;
 }
 function load(){
@@ -485,6 +492,7 @@ function renderToday(){
   renderStreak();
   renderWater();
   renderSupps();
+  renderRecents();
 }
 function toggleWorkout(tk){DB.workouts[tk]=!DB.workouts[tk];if(!DB.workouts[tk])delete DB.workouts[tk];save();renderToday();renderWeek();}
 
@@ -506,9 +514,9 @@ function addFood(){
   const c=+document.getElementById('fCal').value||0;
   const p=+document.getElementById('fPro').value||0;
   if(!c&&!p)return;
-  todayFood().push({n,c,p});save();
+  todayFood().push({n,c,p});rememberFood(n,c,p);save();
   document.getElementById('fName').value='';document.getElementById('fCal').value='';document.getElementById('fPro').value='';
-  renderFoodList();renderFoodTotals();
+  renderFoodList();renderFoodTotals();renderRecents();
 }
 function quickFood(){
   const c=+document.getElementById('qCal').value||0,p=+document.getElementById('qPro').value||0;
@@ -517,11 +525,43 @@ function quickFood(){
   renderFoodList();renderFoodTotals();
 }
 function delFood(i){todayFood().splice(i,1);save();renderFoodList();renderFoodTotals();}
-function logFav(btn,n,c,p){todayFood().push({n,c,p});save();renderFoodList();renderFoodTotals();
+function logFav(btn,n,c,p){todayFood().push({n,c,p});rememberFood(n,c,p);save();renderFoodList();renderFoodTotals();renderRecents();
   const s=document.getElementById('saveState');if(s)s.textContent='added ✓';
   if(btn&&btn.classList){const o=btn.innerHTML;btn.innerHTML='✓ Added +'+c+' cal';
     btn.classList.remove('ghost');btn.classList.add('green');
     setTimeout(()=>{btn.innerHTML=o;btn.classList.remove('green');btn.classList.add('ghost');},1300);}}
+
+/* ---------- recent foods ---------- */
+function rememberFood(n,c,p){
+  if(!n)return;
+  if(!DB.recents)DB.recents=[];
+  const key=n.trim().toLowerCase();
+  let e=DB.recents.find(x=>x.n.trim().toLowerCase()===key);
+  if(e){e.count=(e.count||1)+1;e.c=c;e.p=p;e.last=Date.now();}
+  else{DB.recents.push({n,c,p,count:1,last:Date.now()});}
+  DB.recents.sort((a,b)=>(b.count-a.count)||((b.last||0)-(a.last||0)));
+  if(DB.recents.length>40)DB.recents=DB.recents.slice(0,40);
+}
+function usedBefore(n){
+  if(!n||!DB.recents)return false;
+  const key=n.trim().toLowerCase();
+  return DB.recents.some(x=>x.n.trim().toLowerCase()===key);
+}
+function renderRecents(){
+  const box=document.getElementById('recentFoods');if(!box)return;
+  const r=(DB.recents||[]).slice(0,14);
+  if(!r.length){box.innerHTML='<p class="small muted">Foods you log will show up here so you can re-add them with one tap.</p>';return;}
+  box.innerHTML='';
+  r.forEach(it=>{
+    const b=document.createElement('button');b.className='btn ghost sm';b.style.margin='0 6px 6px 0';
+    b.textContent=(it.n.length>24?it.n.slice(0,24)+'…':it.n)+' ('+it.c+')';
+    b.onclick=()=>{todayFood().push({n:it.n,c:it.c,p:it.p});rememberFood(it.n,it.c,it.p);save();
+      renderFoodList();renderFoodTotals();renderRecents();
+      b.classList.add('green');const o=b.textContent;b.textContent='✓ Added';
+      setTimeout(()=>{b.textContent=o;b.classList.remove('green');},1000);};
+    box.appendChild(b);
+  });
+}
 
 /* ---------- food search (USDA FoodData Central) ---------- */
 function parseFDC(foods){
@@ -567,8 +607,9 @@ async function searchFood(){
       const d=document.createElement('div');d.className='ex';
       const top=document.createElement('div');top.className='top';
       const nm=document.createElement('div');nm.className='name';nm.style.fontSize='13.5px';nm.textContent=it.name;
+      if(usedBefore(it.name)){const pl=document.createElement('span');pl.className='pill g';pl.style.marginLeft='6px';pl.textContent='previously used';nm.appendChild(pl);}
       const btn=document.createElement('button');btn.className='btn green sm';btn.textContent='+ '+it.c+' cal';
-      btn.onclick=()=>{todayFood().push({n:it.name,c:it.c,p:it.p});save();renderFoodList();renderFoodTotals();
+      btn.onclick=()=>{todayFood().push({n:it.name,c:it.c,p:it.p});rememberFood(it.name,it.c,it.p);save();renderFoodList();renderFoodTotals();renderRecents();
         btn.textContent='✓ Added';setTimeout(()=>{btn.textContent='+ '+it.c+' cal';},1200);};
       top.appendChild(nm);top.appendChild(btn);
       const alt=document.createElement('div');alt.className='alt';
@@ -677,8 +718,8 @@ function renderMealDay(){
   c.innerHTML=html;
 }
 function logMeal(day,i){
-  const m=MEALPLAN[day][i];todayFood().push({n:m.n,c:m.c,p:m.p});save();
-  renderFoodList();renderFoodTotals();
+  const m=MEALPLAN[day][i];todayFood().push({n:m.n,c:m.c,p:m.p});rememberFood(m.n,m.c,m.p);save();
+  renderFoodList();renderFoodTotals();renderRecents();
   document.querySelector('nav button[data-v="today"]').click();
 }
 
