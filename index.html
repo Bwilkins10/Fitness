@@ -84,6 +84,10 @@
   .hint{font-size:12.5px;color:var(--muted);background:var(--panel2);border-left:3px solid var(--accent);padding:8px 11px;border-radius:0 8px 8px 0;margin:8px 0}
   .savebadge{font-size:11.5px;color:var(--accent2)}
   details summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+  .hd-grid{display:flex;flex-wrap:wrap;gap:4px}
+  .hd-dot{width:11px;height:11px;border-radius:2px;background:var(--panel2);border:1px solid var(--line)}
+  .hd-dot.done{background:var(--accent2);border-color:var(--accent2)}
+  .hd-dot.cur{background:var(--warn);border-color:var(--warn)}
   a{color:var(--accent)}
 </style>
 </head>
@@ -96,6 +100,7 @@
     <button data-v="workout">Workouts</button>
     <button data-v="diet">Diet</button>
     <button data-v="progress">Progress</button>
+    <button data-v="hard">75 Hard</button>
     <button data-v="setup">Setup</button>
   </nav>
 </header>
@@ -193,15 +198,15 @@
 <!-- ================= WORKOUTS ================= -->
 <section class="view" id="workout">
   <div class="card">
-    <h2>4-Day Muscle Program</h2>
-    <p class="small muted" style="margin-top:-4px">Upper/Lower split. Each move shows a <b style="color:var(--text)">Gym</b> option and a <b style="color:var(--text)">Home / outdoor</b> option — pick whichever fits the day. Log your top set so you can beat it next time.</p>
+    <h2>5-Day Muscle Program</h2>
+    <p class="small muted" style="margin-top:-4px">Push / Pull / Legs / Upper / Lower + 2 cardio days. Each move lists the <b style="color:var(--text)">main lift</b> plus a quick <b style="color:var(--text)">sub</b> if the station's taken. Log your top set so you can beat it next time.</p>
     <div class="hint"><b>How to grow:</b> hit the rep target on every set, then add a little weight (or reps) next session. That's progressive overload — the whole game. Rest 90s–2min on big lifts, ~60s on the rest.</div>
     <div class="day-tabs" id="dayTabs"></div>
     <div id="dayContent"></div>
   </div>
   <div class="card">
     <h3>Weekly layout</h3>
-    <p class="small">A simple week: <b>Mon</b> Upper A · <b>Tue</b> Lower A · <b>Thu</b> Upper B · <b>Fri</b> Lower B · plus 1–2 easy outdoor conditioning sessions (brisk walk, jog, bike, or hill sprints 20–30 min) on off days. Take at least one full rest day. Your lawn work already counts as active recovery.</p>
+    <p class="small">Your week: <b>Mon</b> Push · <b>Tue</b> Pull · <b>Wed</b> Legs · <b>Thu</b> Cardio · <b>Fri</b> Upper · <b>Sat</b> Lower · <b>Sun</b> Cardio. Everything gets trained about twice a week. If you're run down, swap a cardio day for full rest — recovery is when muscle is built.</p>
     <p class="small muted">Every 6–8 weeks take a lighter "deload" week (same lifts, ~60% effort) to recover.</p>
   </div>
 </section>
@@ -289,6 +294,23 @@
   </div>
 </section>
 
+<!-- ================= 75 HARD ================= -->
+<section class="view" id="hard">
+  <div class="card">
+    <h2>🔥 75 Hard</h2>
+    <div id="hardHeader"></div>
+  </div>
+  <div class="card" id="hardChecklistCard">
+    <h2>✅ Today's tasks</h2>
+    <div id="hardChecklist"></div>
+    <p class="small muted" id="hardWaterHint" style="margin-top:8px"></p>
+  </div>
+  <div class="card">
+    <h3>The rules</h3>
+    <p class="small">Every day for 75 days straight: two 45-min workouts (one outdoors), a gallon of water, 10 pages of a nonfiction book, a progress photo, and stick to your diet — no cheat meals, no alcohol. Miss any one task and you start over at Day 1. No substitutions, no compromises. That's the whole point.</p>
+  </div>
+</section>
+
 <!-- ================= SETUP ================= -->
 <section class="view" id="setup">
   <div class="card">
@@ -369,6 +391,8 @@ function ensureDefaults(db){
   if(!db.water)db.water={};
   if(!db.supps)db.supps={};
   if(!Array.isArray(db.recents))db.recents=[];
+  if(!db.hard)db.hard={active:false,log:{}};
+  if(!db.hard.log)db.hard.log={};
   return db;
 }
 function load(){
@@ -393,41 +417,56 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');document.getElementById(b.dataset.v).classList.add('active');
   if(b.dataset.v==='progress')drawChart();
+  if(b.dataset.v==='hard')renderHard();
 });
 
 /* ---------- program data ---------- */
 const PROGRAM={
-  'Upper A':[
-    {name:'Bench press',scheme:'4 × 6–10',gym:'Barbell or dumbbell bench',home:'Weighted / feet-elevated push-ups',log:true},
-    {name:'Overhead press',scheme:'3 × 8–12',gym:'Barbell or DB shoulder press',home:'Pike push-ups or DB press',log:true},
-    {name:'Bent-over row',scheme:'4 × 8–12',gym:'Barbell / DB row',home:'DB row or inverted row (bar/table)',log:true},
-    {name:'Lat pulldown',scheme:'3 × 8–12',gym:'Cable pulldown',home:'Pull-ups or band pulldown',log:false},
-    {name:'Lateral raise',scheme:'3 × 12–15',gym:'Dumbbells',home:'Dumbbells or bands',log:false},
-    {name:'Biceps + triceps superset',scheme:'3 × 10–15',gym:'Curls + rope pushdown',home:'DB curls + bench dips',log:false},
+  'Push':[
+    {name:'Barbell bench press',scheme:'4 × 6–10',gym:'Flat barbell bench press',home:'Machine chest press',log:true},
+    {name:'Incline DB press',scheme:'3 × 8–12',gym:'Incline dumbbell press',home:'Incline machine press',log:true},
+    {name:'Machine shoulder press',scheme:'3 × 8–12',gym:'Machine or barbell shoulder press',home:'Seated DB press',log:true},
+    {name:'Cable lateral raise',scheme:'3 × 12–15',gym:'Cable lateral raise',home:'Dumbbell lateral raise',log:false},
+    {name:'Triceps pushdown',scheme:'3 × 10–15',gym:'Cable rope pushdown',home:'Machine triceps',log:false},
+    {name:'Overhead triceps ext',scheme:'3 × 12–15',gym:'Overhead cable / DB extension',home:'Skullcrushers',log:false},
   ],
-  'Lower A':[
-    {name:'Back squat',scheme:'4 × 6–10',gym:'Barbell squat',home:'Goblet or Bulgarian split squat',log:true},
-    {name:'Romanian deadlift',scheme:'3 × 8–12',gym:'Barbell RDL',home:'DB RDL or single-leg RDL',log:true},
-    {name:'Lunges / leg press',scheme:'3 × 10–15',gym:'Leg press',home:'Walking lunges (outdoor)',log:false},
-    {name:'Leg curl / hamstring',scheme:'3 × 10–15',gym:'Seated leg curl',home:'Nordic curl or glute bridge',log:false},
-    {name:'Calf raise',scheme:'4 × 12–20',gym:'Standing calf raise',home:'Single-leg calf raise on step',log:false},
-    {name:'Core (plank / leg raise)',scheme:'3 sets',gym:'Hanging leg raise',home:'Plank + lying leg raise',log:false},
+  'Pull':[
+    {name:'Pull-ups',scheme:'4 × 6–10',gym:'Weighted or bodyweight pull-ups',home:'Lat pulldown',log:true},
+    {name:'Barbell row',scheme:'4 × 8–12',gym:'Bent-over barbell row',home:'Chest-supported machine row',log:true},
+    {name:'Lat pulldown',scheme:'3 × 10–12',gym:'Wide-grip lat pulldown',home:'Assisted pull-up machine',log:false},
+    {name:'Seated cable row',scheme:'3 × 10–12',gym:'Seated cable row',home:'Machine row',log:false},
+    {name:'Cable face pulls',scheme:'3 × 15–20',gym:'Cable face pull',home:'Reverse pec deck',log:false},
+    {name:'Biceps curls',scheme:'3 × 10–15',gym:'Incline DB curl + hammer curl',home:'Cable / machine curl',log:false},
   ],
-  'Upper B':[
-    {name:'Incline DB press',scheme:'4 × 8–12',gym:'Incline dumbbell press',home:'Decline (feet up) push-ups',log:true},
-    {name:'Pull-ups',scheme:'4 × 6–10',gym:'Weighted pull-ups / pulldown',home:'Pull-ups or band assisted',log:true},
-    {name:'Seated row',scheme:'3 × 10–12',gym:'Cable / machine row',home:'DB row or inverted row',log:false},
-    {name:'DB shoulder press',scheme:'3 × 10–12',gym:'Seated DB press',home:'Standing DB / pike push-ups',log:false},
-    {name:'Face pulls',scheme:'3 × 15–20',gym:'Cable face pull',home:'Band pull-aparts',log:false},
-    {name:'Curls + triceps',scheme:'3 × 12–15',gym:'Cable/DB',home:'DB curls + dips',log:false},
+  'Legs':[
+    {name:'Barbell back squat',scheme:'4 × 6–10',gym:'Barbell back squat',home:'Hack squat machine',log:true},
+    {name:'Romanian deadlift',scheme:'3 × 8–12',gym:'Barbell RDL',home:'Dumbbell RDL',log:true},
+    {name:'Leg press',scheme:'3 × 10–15',gym:'Leg press',home:'Walking lunges',log:false},
+    {name:'Seated leg curl',scheme:'3 × 10–15',gym:'Seated leg curl',home:'Lying leg curl',log:false},
+    {name:'Leg extension',scheme:'3 × 12–15',gym:'Leg extension machine',home:'Dumbbell step-ups',log:false},
+    {name:'Standing calf raise',scheme:'4 × 12–20',gym:'Standing calf raise',home:'Leg-press calf press',log:false},
   ],
-  'Lower B':[
-    {name:'Deadlift',scheme:'3 × 5–8',gym:'Barbell deadlift',home:'DB / trap-bar or heavy hip thrust',log:true},
-    {name:'Front / goblet squat',scheme:'3 × 8–12',gym:'Front squat',home:'Goblet squat',log:true},
-    {name:'Hip thrust',scheme:'3 × 10–15',gym:'Barbell hip thrust',home:'Single-leg glute bridge',log:false},
-    {name:'Walking lunges',scheme:'3 × 12 / leg',gym:'DB walking lunges',home:'Outdoor walking lunges',log:false},
-    {name:'Leg extension / step-up',scheme:'3 × 12–15',gym:'Leg extension',home:'Box step-ups',log:false},
-    {name:'Calf + core',scheme:'3–4 sets',gym:'Calf raise + cable crunch',home:'Calf raise + plank',log:false},
+  'Upper':[
+    {name:'Incline barbell press',scheme:'4 × 8–12',gym:'Incline barbell or DB press',home:'Incline machine press',log:true},
+    {name:'Chest-supported row',scheme:'4 × 8–12',gym:'Chest-supported machine row',home:'Barbell row',log:true},
+    {name:'Machine shoulder press',scheme:'3 × 10–12',gym:'Machine shoulder press',home:'Seated DB press',log:false},
+    {name:'Lat pulldown',scheme:'3 × 10–12',gym:'Lat pulldown',home:'Assisted pull-up',log:false},
+    {name:'Lateral raise',scheme:'3 × 12–15',gym:'Cable or DB lateral raise',home:'Machine lateral raise',log:false},
+    {name:'Curl + pushdown',scheme:'3 × 12–15',gym:'DB curl + rope pushdown superset',home:'Machine curl + triceps',log:false},
+  ],
+  'Lower':[
+    {name:'Deadlift',scheme:'3 × 5–8',gym:'Conventional or trap-bar deadlift',home:'Rack pull',log:true},
+    {name:'Hack squat',scheme:'3 × 8–12',gym:'Hack squat or front squat',home:'Leg press',log:true},
+    {name:'Barbell hip thrust',scheme:'3 × 10–12',gym:'Barbell hip thrust',home:'Machine glute drive',log:false},
+    {name:'Bulgarian split squat',scheme:'3 × 12 / leg',gym:'DB Bulgarian split squat',home:'Walking lunges',log:false},
+    {name:'Seated leg curl',scheme:'3 × 12–15',gym:'Seated leg curl',home:'Lying leg curl',log:false},
+    {name:'Seated calf + core',scheme:'3–4 sets',gym:'Seated calf raise + cable crunch',home:'Calf press + plank',log:false},
+  ],
+  'Cardio':[
+    {name:'Steady walk',scheme:'25–35 min',gym:'Incline treadmill walk',home:'Outdoor walk / jog',log:false},
+    {name:'Bike',scheme:'25–35 min',gym:'Stationary bike',home:'Bike outdoors',log:false},
+    {name:'Machine',scheme:'20–30 min',gym:'Stair climber or elliptical',home:'Jump rope',log:false},
+    {name:'Intervals (optional)',scheme:'15–20 min',gym:'Bike / treadmill intervals',home:'Hill sprints (outdoor)',log:false},
   ],
 };
 const DAYS=Object.keys(PROGRAM);
@@ -448,7 +487,7 @@ function exCard(ex,day,i){
   const rec=DB.lifts[key];
   const d=document.createElement('div');d.className='ex';
   d.innerHTML=`<div class="top"><div class="name">${ex.name}</div><div class="scheme">${ex.scheme}</div></div>
-    <div class="alt">🏋️ <b>Gym:</b> ${ex.gym} &nbsp;·&nbsp; 🌳 <b>Home:</b> ${ex.home}</div>`;
+    <div class="alt">🏋️ <b>Do:</b> ${ex.gym} &nbsp;·&nbsp; <span class="muted"><b>Sub:</b> ${ex.home}</span></div>`;
   if(ex.log){
     const line=document.createElement('div');line.className='logline';
     line.innerHTML=`<span class="small muted">Top set:</span>
@@ -470,8 +509,9 @@ function exCard(ex,day,i){
 function renderToday(){
   const d=new Date();
   document.getElementById('todayDate').textContent=d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-  // suggested workout by weekday: Mon UpperA Tue LowerA Thu UpperB Fri LowerB
-  const map={1:'Upper A',2:'Lower A',4:'Upper B',5:'Lower B'};
+  // 5-day split: Mon Push, Tue Pull, Wed Legs, Fri Upper, Sat Lower; Thu & Sun cardio
+  const map={1:'Push',2:'Pull',3:'Legs',5:'Upper',6:'Lower'};
+  const cardioDays={0:true,4:true};
   const wk=d.getDay();
   const tw=document.getElementById('todayWorkout');
   const tk=todayKey();
@@ -484,9 +524,14 @@ function renderToday(){
     PROGRAM[day].forEach(ex=>{html+=`<span class="chip">${ex.name}</span>`;});
     html+=`</div><p class="small muted" style="margin-top:6px">Open the <b>Workouts</b> tab to log your sets.</p>`;
     tw.innerHTML=html;
+  }else if(cardioDays[wk]){
+    const done=DB.workouts[tk];
+    tw.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center">
+      <div><b>Cardio day</b> <span class="pill ${done?'g':'o'}">${done?'done':'to do'}</span></div>
+      <button class="btn ${done?'ghost':'green'} sm" onclick="toggleWorkout('${tk}')">${done?'Undo':'Log cardio'}</button></div>
+      <p class="small muted" style="margin-top:8px">25–35 min moderate: incline treadmill walk, bike, stair climber, or intervals. Keep it easy enough that it doesn't wreck your lifting recovery.</p>`;
   }else{
-    tw.innerHTML=`<p class="small">Rest / conditioning day. Optional: 20–30 min brisk walk, jog, bike, or hill sprints. Your lawn work counts too.
-      <br><br><button class="btn green sm" onclick="toggleWorkout('${tk}')">${DB.workouts[tk]?'Undo cardio ✓':'Log conditioning'}</button></p>`;
+    tw.innerHTML=`<p class="small">Rest day — recover, eat, hydrate. Your lawn work counts as active recovery.</p>`;
   }
   renderFoodTotals();
   renderStreak();
@@ -903,11 +948,61 @@ async function pushNow(manual){
   catch(e){setSyncState('error','o');if(manual)syncMsg('Push failed: '+e.message);}
 }
 
+/* ---------- 75 Hard ---------- */
+const HARD=[
+  {k:'w1',label:'Workout 1 — 45 min'},
+  {k:'w2',label:'Workout 2 — 45 min OUTDOORS'},
+  {k:'water',label:'Drink 1 gallon of water (128 oz)'},
+  {k:'read',label:'Read 10 pages (nonfiction)'},
+  {k:'photo',label:'Progress photo'},
+  {k:'diet',label:'Diet on point — no cheat, no alcohol'},
+];
+function hardKeyOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function hardToday(){const k=todayKey();if(!DB.hard.log[k])DB.hard.log[k]={};return DB.hard.log[k];}
+function hardComplete(k){const e=DB.hard.log[k];if(!e)return false;return HARD.every(t=>!!e[t.k]);}
+function hardDayNumber(){
+  let n=0;const d=new Date();d.setDate(d.getDate()-1);
+  for(let i=0;i<400;i++){if(hardComplete(hardKeyOf(d))){n++;d.setDate(d.getDate()-1);}else break;}
+  return n+1;
+}
+function startHard(){DB.hard.active=true;DB.hard.start=todayKey();hardToday();save();renderHard();}
+function resetHard(){if(!confirm('Reset 75 Hard back to Day 1? This clears your streak.'))return;DB.hard={active:true,start:todayKey(),log:{}};save();renderHard();}
+function toggleHard(k){const e=hardToday();e[k]=!e[k];if(!e[k])delete e[k];save();renderHard();}
+function renderHard(){
+  const head=document.getElementById('hardHeader');const card=document.getElementById('hardChecklistCard');
+  if(!head)return;
+  if(!DB.hard.active){
+    head.innerHTML='<p class="small muted" style="margin-top:-4px">The 75 Hard mental-toughness challenge — 75 days, no compromises. Ready to commit?</p>'+
+      '<button class="btn green" onclick="startHard()">Start Day 1</button>';
+    if(card)card.style.display='none';return;
+  }
+  if(card)card.style.display='';
+  const day=hardDayNumber();const todayDone=hardComplete(todayKey());
+  const shown=Math.min(day,75);
+  const filled=Math.min((day-1)+(todayDone?1:0),75);
+  const pct=Math.round(filled/75*100);
+  let grid='';
+  for(let i=1;i<=75;i++){let cls='hd-dot';if(i<day)cls+=' done';else if(i===day)cls+=(todayDone?' done':' cur');grid+='<span class="'+cls+'"></span>';}
+  head.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;margin-top:-4px">'+
+      '<div><span style="font-size:30px;font-weight:800">Day '+shown+'</span> <span class="muted">/ 75</span></div>'+
+      '<div class="pill '+(todayDone?'g':'o')+'">'+(todayDone?'today complete ✓':'in progress')+'</div></div>'+
+    '<div class="bar" style="margin-top:8px"><span style="width:'+pct+'%"></span></div>'+
+    '<div class="hd-grid" style="margin-top:12px">'+grid+'</div>'+
+    '<p class="small muted" style="margin-top:10px">Finish all 6 tasks every day. Miss one and you restart at Day 1 — no exceptions.<br>'+
+      '<button class="btn ghost sm" style="margin-top:8px" onclick="resetHard()">Reset / restart</button></p>';
+  const box=document.getElementById('hardChecklist');const e=hardToday();box.innerHTML='';
+  HARD.forEach(t=>{const on=!!e[t.k];const b=document.createElement('button');
+    b.className='btn '+(on?'green':'ghost')+' sm';b.style.cssText='display:block;width:100%;text-align:left;margin-bottom:8px';
+    b.textContent=(on?'✓ ':'○ ')+t.label;b.onclick=()=>toggleHard(t.k);box.appendChild(b);});
+  const wh=document.getElementById('hardWaterHint');
+  if(wh){const oz=(DB.water&&DB.water[todayKey()])||0;wh.textContent='Water logged today: '+oz+' / 128 oz. Tap the water task once you hit a gallon.';}
+}
+
 /* ---------- init ---------- */
 function initAll(pull){
   renderDayTabs();renderDay();renderToday();renderFoodList();renderFoodTotals();
   renderTargets();renderWeek();renderLiftHistory();drawChart();fillSync();
-  renderWater();renderSupps();renderMealTabs();renderMealDay();
+  renderWater();renderSupps();renderMealTabs();renderMealDay();renderHard();
   if(pull!==false&&SYNC.token)pullNow(false);
 }
 initAll();
