@@ -206,7 +206,7 @@
   </div>
   <div class="card">
     <h3>Weekly layout</h3>
-    <p class="small">Your week: <b>Mon</b> Push · <b>Tue</b> Pull · <b>Wed</b> Legs · <b>Thu</b> Cardio · <b>Fri</b> Upper · <b>Sat</b> Lower · <b>Sun</b> Cardio. Everything gets trained about twice a week. If you're run down, swap a cardio day for full rest — recovery is when muscle is built.</p>
+    <p class="small">Your week: <b>Thu</b> Push · <b>Fri</b> Pull · <b>Sat</b> Legs · <b>Sun</b> Cardio · <b>Mon</b> Upper · <b>Tue</b> Lower · <b>Wed</b> Cardio. Everything gets trained about twice a week. If you're run down, swap a cardio day for full rest — recovery is when muscle is built.</p>
     <p class="small muted">Every 6–8 weeks take a lighter "deload" week (same lifts, ~60% effort) to recover.</p>
   </div>
 </section>
@@ -426,7 +426,7 @@ const PROGRAM={
     {name:'Barbell bench press',scheme:'4 × 6–10',gym:'Flat barbell bench press',home:'Machine chest press',log:true},
     {name:'Incline DB press',scheme:'3 × 8–12',gym:'Incline dumbbell press',home:'Incline machine press',log:true},
     {name:'Machine shoulder press',scheme:'3 × 8–12',gym:'Machine or barbell shoulder press',home:'Seated DB press',log:true},
-    {name:'Cable lateral raise',scheme:'3 × 12–15',gym:'Cable lateral raise',home:'Dumbbell lateral raise',log:false},
+    {name:'Cable lateral raise',scheme:'3 × 12–15',gym:'Cable lateral raise',home:'Dumbbell lateral raise',log:false,ss:true},
     {name:'Triceps pushdown',scheme:'3 × 10–15',gym:'Cable rope pushdown',home:'Machine triceps',log:false},
     {name:'Overhead triceps ext',scheme:'3 × 12–15',gym:'Overhead cable / DB extension',home:'Skullcrushers',log:false},
   ],
@@ -435,7 +435,7 @@ const PROGRAM={
     {name:'Barbell row',scheme:'4 × 8–12',gym:'Bent-over barbell row',home:'Chest-supported machine row',log:true},
     {name:'Lat pulldown',scheme:'3 × 10–12',gym:'Wide-grip lat pulldown',home:'Assisted pull-up machine',log:false},
     {name:'Seated cable row',scheme:'3 × 10–12',gym:'Seated cable row',home:'Machine row',log:false},
-    {name:'Cable face pulls',scheme:'3 × 15–20',gym:'Cable face pull',home:'Reverse pec deck',log:false},
+    {name:'Cable face pulls',scheme:'3 × 15–20',gym:'Cable face pull',home:'Reverse pec deck',log:false,ss:true},
     {name:'Biceps curls',scheme:'3 × 10–15',gym:'Incline DB curl + hammer curl',home:'Cable / machine curl',log:false},
   ],
   'Legs':[
@@ -443,7 +443,7 @@ const PROGRAM={
     {name:'Romanian deadlift',scheme:'3 × 8–12',gym:'Barbell RDL',home:'Dumbbell RDL',log:true},
     {name:'Leg press',scheme:'3 × 10–15',gym:'Leg press',home:'Walking lunges',log:false},
     {name:'Seated leg curl',scheme:'3 × 10–15',gym:'Seated leg curl',home:'Lying leg curl',log:false},
-    {name:'Leg extension',scheme:'3 × 12–15',gym:'Leg extension machine',home:'Dumbbell step-ups',log:false},
+    {name:'Leg extension',scheme:'3 × 12–15',gym:'Leg extension machine',home:'Dumbbell step-ups',log:false,ss:true},
     {name:'Standing calf raise',scheme:'4 × 12–20',gym:'Standing calf raise',home:'Leg-press calf press',log:false},
   ],
   'Upper':[
@@ -451,7 +451,7 @@ const PROGRAM={
     {name:'Chest-supported row',scheme:'4 × 8–12',gym:'Chest-supported machine row',home:'Barbell row',log:true},
     {name:'Machine shoulder press',scheme:'3 × 10–12',gym:'Machine shoulder press',home:'Seated DB press',log:false},
     {name:'Lat pulldown',scheme:'3 × 10–12',gym:'Lat pulldown',home:'Assisted pull-up',log:false},
-    {name:'Lateral raise',scheme:'3 × 12–15',gym:'Cable or DB lateral raise',home:'Machine lateral raise',log:false},
+    {name:'Lateral raise',scheme:'3 × 12–15',gym:'Cable or DB lateral raise',home:'Machine lateral raise',log:false,ss:true},
     {name:'Curl + pushdown',scheme:'3 × 12–15',gym:'DB curl + rope pushdown superset',home:'Machine curl + triceps',log:false},
   ],
   'Lower':[
@@ -459,7 +459,7 @@ const PROGRAM={
     {name:'Hack squat',scheme:'3 × 8–12',gym:'Hack squat or front squat',home:'Leg press',log:true},
     {name:'Barbell hip thrust',scheme:'3 × 10–12',gym:'Barbell hip thrust',home:'Machine glute drive',log:false},
     {name:'Bulgarian split squat',scheme:'3 × 12 / leg',gym:'DB Bulgarian split squat',home:'Walking lunges',log:false},
-    {name:'Seated leg curl',scheme:'3 × 12–15',gym:'Seated leg curl',home:'Lying leg curl',log:false},
+    {name:'Seated leg curl',scheme:'3 × 12–15',gym:'Seated leg curl',home:'Lying leg curl',log:false,ss:true},
     {name:'Seated calf + core',scheme:'3–4 sets',gym:'Seated calf raise + cable crunch',home:'Calf press + plank',log:false},
   ],
   'Cardio':[
@@ -487,7 +487,8 @@ function exCard(ex,day,i){
   const rec=DB.lifts[key];
   const d=document.createElement('div');d.className='ex';
   d.innerHTML=`<div class="top"><div class="name">${ex.name}</div><div class="scheme">${ex.scheme}</div></div>
-    <div class="alt">🏋️ <b>Do:</b> ${ex.gym} &nbsp;·&nbsp; <span class="muted"><b>Sub:</b> ${ex.home}</span></div>`;
+    <div class="alt">🏋️ <b>Do:</b> ${ex.gym} &nbsp;·&nbsp; <span class="muted"><b>Sub:</b> ${ex.home}</span></div>
+    ${ex.ss?'<div class="small" style="color:var(--accent);margin-top:4px">🔗 Superset with the next exercise (no rest between)</div>':''}`;
   if(ex.log){
     const line=document.createElement('div');line.className='logline';
     line.innerHTML=`<span class="small muted">Top set:</span>
@@ -509,9 +510,9 @@ function exCard(ex,day,i){
 function renderToday(){
   const d=new Date();
   document.getElementById('todayDate').textContent=d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-  // 5-day split: Mon Push, Tue Pull, Wed Legs, Fri Upper, Sat Lower; Thu & Sun cardio
-  const map={1:'Push',2:'Pull',3:'Legs',5:'Upper',6:'Lower'};
-  const cardioDays={0:true,4:true};
+  // 5-day split: Thu Push, Fri Pull, Sat Legs, Mon Upper, Tue Lower; Sun & Wed cardio
+  const map={4:'Push',5:'Pull',6:'Legs',1:'Upper',2:'Lower'};
+  const cardioDays={0:true,3:true};
   const wk=d.getDay();
   const tw=document.getElementById('todayWorkout');
   const tk=todayKey();
